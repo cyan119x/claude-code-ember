@@ -1,0 +1,6 @@
+{
+  "description": "ember (Mod): session.start, session.attach, session.end, session.measure, classic.SessionStart, classic.Stop, command.run{command=keepwarm|ember}, prompt.submit, turn.step, turn.complete, session.compact, ui.render{AbovePrompt}. Needs a Claude Code build with mods (function hooks).",
+  "modules": [
+    "./register.ts"
+  ]
+}

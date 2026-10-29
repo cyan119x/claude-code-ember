@@ -1,0 +1,10 @@
+{
+  "name": "ember",
+  "version": "1.6.2",
+  "description": "A ribbon above the prompt: how much of your 5-hour and 7-day usage is left and when each resets, whether the prompt cache is warm or cold with what the next message costs, a Keep warm menu, and a held send that asks Send anyway / Cancel when the cache has gone cold. Built on karanb192/cache-tax (MIT) and robonuggets/ribbon (MIT).",
+  "author": {
+    "name": "cyan119x",
+    "url": "https://github.com/cyan119x"
+  },
+  "license": "MIT"
+}

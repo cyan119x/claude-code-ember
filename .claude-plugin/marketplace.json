@@ -1,0 +1,15 @@
+{
+  "name": "claude-code-ember",
+  "owner": {
+    "name": "cyan119x",
+    "url": "https://github.com/cyan119x"
+  },
+  "description": "Ember, a Claude Code mod that shows usage left and the prompt cache above the prompt.",
+  "plugins": [
+    {
+      "name": "ember",
+      "source": "./",
+      "description": "A slim band above the prompt: usage left in the 5-hour and 7-day windows, whether the prompt cache is warm or cold with what the next message costs, one-click Keep warm, and a held send when the cache has gone cold."
+    }
+  ]
+}
