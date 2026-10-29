@@ -93,7 +93,7 @@ When the cache is cold and the chat holds 50k tokens or more, Ember holds your m
 
 ### Fits any width
 
-Wide, everything sits on one row. As the band narrows, the ten squares become five, then the reset times go, then the squares; past that, usage takes a row of its own. Light and dark mode both have their own colours.
+Wide, everything sits on one row. As the band narrows, the ten squares become five, then the reset times go, then the squares; past that, usage takes a row of its own. The form follows the band's width, not the clock: a minute ticking from 1h left to 59m left never changes it. Light and dark mode both have their own colours.
 
 <p align="center">
   <img src="assets/narrow.png" alt="A narrow band: five squares for each usage window" width="73%">
@@ -142,7 +142,7 @@ claude-code-ember/
 │   ├── register.ts         the band, cache tracking, Keep warm, the held send, commands
 │   ├── outfit-metrics.ts   Outfit's glyph widths, so drawn text fits exactly
 │   └── font.ts             Outfit, embedded so the drawings render anywhere
-├── tests/register.test.ts  181 tests
+├── tests/register.test.ts  182 tests
 └── assets/                 banner and illustrations
 ```
 

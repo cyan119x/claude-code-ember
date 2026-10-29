@@ -696,6 +696,20 @@ export function fmtSpan(ms: number): string {
   return hours % 24 ? `${Math.floor(hours / 24)}d ${hours % 24}h` : `${Math.floor(hours / 24)}d`
 }
 
+/** The longest a tag's time runs in its mode, which the band reserves: a 1h cache counts down from 59m left. */
+export function longestTimes(s: State, mode: Mode): string[] {
+  if (mode === 'WARM' || mode === 'COOLING') return [`${fmtSpan(s.ttl - 60_000)} left`]
+  if (mode === 'KEPT' && !s.always && s.keepWindow > 0) return [`${fmtSpan(s.keepWindow - 60_000)} left`]
+  return []
+}
+
+/** The longest a window's reset time runs in its current unit: 4h 59m for the 5-hour; 6d 23h, or 23h 59m on its last day. */
+export function longestResets(kind: string, reset: string): string[] {
+  if (kind === 'five_hour') return ['4h 59m']
+  if (kind === 'seven_day') return [reset.includes('d') ? '6d 23h' : '23h 59m']
+  return []
+}
+
 /**
  * The tag's fill and the time's colour. Mid-tone on purpose: a Button draws its label in the theme's own text
  * colour (dark in light mode, light in dark mode), and each of these holds 3.5:1 or better against both.
@@ -797,6 +811,8 @@ const MUTED_HEX: [string, string] = ['#6B6A64', '#A5A49A']
 const TEXT_HEX: [string, string] = ['#141413', '#F5F4EE']
 /** The pixel width a desktop column stands for: the app's 1ch at its body size. */
 const COLUMN_PX = 8.2
+/** The columns the engine keeps off a band's bodyColumns for the terminal's [-] mark (5 on Claude Code 2.1.309). */
+const ENGINE_MARK_COLUMNS = 5
 
 type Weight = 400 | 600 | 700
 export type Run = { text: string; weight: Weight; color: string | [string, string] } | { cells: number; hex: string; count?: number } | { gap: number }
@@ -807,6 +823,19 @@ export function outfitWidth(text: string, weight: Weight, px = TEXT_PX): number 
   let em = 0
   for (const ch of text) em += table[ch] ?? 0.75
   return em * px
+}
+
+/** Outfit's widest digit at a weight: its figures are proportional, so 1 is narrower than 0. */
+const widestDigit = (weight: Weight) =>
+  [...'0123456789'].reduce((a, b) => ((ADVANCES[weight]?.[b] ?? 0) > (ADVANCES[weight]?.[a] ?? 0) ? b : a))
+
+/**
+ * The widest of the forms a text runs through, each digit counted as the widest: what the band reserves for a text the
+ * clock rewrites, so 1h left turning 59m left, or 69% turning 70%, never changes how many squares fit.
+ */
+export function steadyWidth(texts: readonly string[], weight: Weight): number {
+  const digit = widestDigit(weight)
+  return Math.max(0, ...texts.map(t => outfitWidth(t.replace(/\d/g, digit), weight)))
 }
 
 /**
@@ -1047,7 +1076,9 @@ export const register: Register = on => {
     type Win = (typeof windows)[number]
     // The widest form that fits one row: 0 all of it, 1 the meter down to five squares,
     // 2 without the reset times, 3 without the squares too; past that, usage on a row of its own above the cache.
-    const columns = e.props.bodyColumns ?? e.viewport?.columns ?? 100
+    // The engine keeps five columns off bodyColumns for the terminal's [-] mark. The desktop draws no mark, and its band
+    // spans those five, so they count there.
+    const columns = e.props.bodyColumns != null ? e.props.bodyColumns + (Svg ? ENGINE_MARK_COLUMNS : 0) : (e.viewport?.columns ?? 100)
     const cellsAt = (lvl: number) => (lvl === 0 ? CELLS : lvl <= 2 ? FEW_CELLS : 0)
     const resetAt = (lvl: number) => lvl <= 1
     const pctText = (w: Win) => `${w.left}%`
@@ -1056,15 +1087,22 @@ export const register: Register = on => {
     // Desktop: pixels, from Outfit's advances and the drawings' own sizes, against the band's columns at 1ch each.
     // Terminal: cells, as the text is drawn there.
     const room = roomOf(e.surface, columns)
+    // What the clock rewrites (the reset times, the tag's time, a percent's digits) is measured at its longest in its
+    // unit, so the form follows the band's width and does not flip between ten squares and five as a minute ticks.
+    const steady = (texts: string[], weight: Weight) =>
+      Svg ? steadyWidth(texts, weight) : Math.max(...texts.map(t => room.text(t, weight === 700)))
+    const pctForms = (w: Win) => [pctText(w) + lowText(w)]
+    const resetForms = (w: Win) => (w.reset ? [resetText(w), ...longestResets(w.kind, w.reset).map(r => ` · ${r}`)] : [])
+    const timeForms = [tag.time, ...longestTimes(s, mode)]
     const winWidth = (w: Win, lvl: number) => {
       const count = cellsAt(lvl)
       return Svg
-        ? outfitWidth(w.name, 600) + 6 + (count ? meterWidth(count) + 6 : 0) + outfitWidth(pctText(w) + lowText(w), 700) + (resetAt(lvl) ? outfitWidth(resetText(w), 400) : 0)
-        : room.text(w.name, true) + room.small + (count ? room.bar(count) + room.small : 0) + room.text(pctText(w) + lowText(w), true) + (resetAt(lvl) ? room.text(resetText(w)) : 0)
+        ? outfitWidth(w.name, 600) + 6 + (count ? meterWidth(count) + 6 : 0) + steady(pctForms(w), 700) + (resetAt(lvl) ? steady(resetForms(w), 400) : 0)
+        : room.text(w.name, true) + room.small + (count ? room.bar(count) + room.small : 0) + steady(pctForms(w), 700) + (resetAt(lvl) ? steady(resetForms(w), 400) : 0)
     }
     const cacheWidth = () => Svg
-      ? 20 + 8 + outfitWidth(tagLabel, 700) + 18 + 8 + outfitWidth(tag.time, 700) + (showFold ? 20 + foldLabel.length * 8 + 26 : 0)
-      : room.sprite + room.small + room.button(tagLabel) + room.small + room.text(tag.time, true) + (showFold ? room.gap + room.button(foldLabel) : 0)
+      ? 20 + 8 + outfitWidth(tagLabel, 700) + 18 + 8 + steady(timeForms, 700) + (showFold ? 20 + foldLabel.length * 8 + 26 : 0)
+      : room.sprite + room.small + room.button(tagLabel) + room.small + steady(timeForms, 700) + (showFold ? room.gap + room.button(foldLabel) : 0)
     const gap = Svg ? 20 : room.gap
     const width = Svg ? columns * COLUMN_PX - 8 : room.width
     const widthAt = (lvl: number, withCache = showCache) => {

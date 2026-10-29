@@ -426,7 +426,25 @@ describe('the ribbon', () => {
       if (steps.at(-1)?.[1] !== form) steps.push([columns, form])
     }
     // On a row of its own, usage keeps the widest of its forms that fits there.
-    expect(steps).toEqual([[30, 'split 2'], [41, 'split 1'], [45, 3], [59, 2], [70, 1], [84, 0]])
+    expect(steps).toEqual([[30, 'split 2'], [40, 'split 1'], [43, 3], [57, 2], [71, 1], [84, 0]])
+  })
+
+  test('the squares hold as the clock runs: 1h left turning 58m left keeps ten at 84 columns, and five at 83', async ($, on) => {
+    const clock = mock.clock(on, { now: Date.parse('2026-10-29T08:00:00Z') })
+    world(on, [], { live: { tokens: 200000 }, rateLimits: [
+      { kind: 'five_hour', percentUsed: 7, resetsAt: '2026-10-29T11:19:00Z' },
+      { kind: 'seven_day', percentUsed: 25, resetsAt: '2026-10-30T17:00:00Z' },
+    ] })
+    await $.session.start({ ...session, surface: 'desktop', isInteractive: true })
+    await $.turn.complete(turn())
+    const squaresAt = async (bodyColumns: number) => {
+      const ui = await $.ui.mount({ plugin: 'ember', surface: 'desktop', component: 'AbovePrompt', props: { ...bandProps, bodyColumns } })
+      const seven = byKey(await ui.drawn(), 'w-seven_day')?.children?.[0] as DrawnNode | undefined
+      return String(seven?.props?.source ?? '').match(/<rect /g)?.length ?? 0
+    }
+    const before = [await squaresAt(84), await squaresAt(83)]
+    await clock.advance(2 * 60_000)
+    expect([before, [await squaresAt(84), await squaresAt(83)]]).toEqual([[10, 5], [10, 5]])
   })
 
   test('an open band: a hairline under the row, and upright ones between the card\'s zones; the terminal draws none', async ($, on) => {
