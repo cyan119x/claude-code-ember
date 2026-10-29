@@ -2,7 +2,7 @@ import { describe, expect, mock, test, tier } from 'claude-code/testing'
 import type { Plugin, TestBody } from 'claude-code/testing'
 import type { CommandRunInput, ConfigSetInput, ModelForkResult, On, PromptSubmitInput, RenderPropsOf, SessionStartInput, TurnCompleteInput, TurnUsage } from 'claude-code'
 
-import { cacheTtlFromTranscript, cellsSvg, cellsText, outfitWidth, tagBlanks, fmtDuration, fmtSpan, freshState, litCells, parseDuration, rankOf, resetForClear, seedFromResume, stackPieces } from '../hooks/register'
+import { cacheTtlFromTranscript, cellsSvg, cellsText, outfitWidth, tagBlanks, fmtDuration, fmtSpan, freshState, litCells, tagOf, parseDuration, rankOf, resetForClear, seedFromResume, stackPieces } from '../hooks/register'
 
 tier('user')
 
@@ -490,9 +490,17 @@ describe('the ribbon', () => {
     expect([layer?.props?.left, layer?.props?.right, layer?.props?.overflow]).toEqual([-3, -3, undefined])
   })
 
+  test('with no request to time the cache from, the tag says why: NEW before the first message, SUMMARY after a compaction', () => {
+    const s = freshState()
+    expect(tagOf(s, 1_000)).toEqual({ word: 'NEW', hue: 'muted', time: 'cache starts with your first message' })
+    s.lastRequestAt = 500
+    s.compacted = true
+    expect(tagOf(s, 1_000)).toEqual({ word: 'SUMMARY', hue: 'muted', time: 'cache rebuilt next turn · small write' })
+  })
+
   test('the tag Button covers the pill and is never wide enough for the app to cut it to "\u2026"', () => {
     const BLANK_EM = 0.6836
-    for (const word of ['WARM', 'COLD', 'CACHE', 'KEPT 1H', 'KEPT 2H', 'KEPT 6H', 'KEPT 48H', 'KEPT \u221e']) {
+    for (const word of ['WARM', 'COLD', 'NEW', 'SUMMARY', 'KEPT 1H', 'KEPT 2H', 'KEPT 6H', 'KEPT 48H', 'KEPT \u221e']) {
       const pill = outfitWidth(word, 700) + 1 + 2 * 8 + 2
       // At the band's 14px, and at 16px should the app's type run larger: the label, with the plain Button's
       // padding (4px a side), reaches the pill's edges and stays inside the layer (the pill and 3ch, 1ch = 0.6em, a side).

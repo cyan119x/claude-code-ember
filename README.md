@@ -67,6 +67,7 @@ Next to the flame:
 - **WARM** with the minutes left before the cache goes cold.
 - **KEPT 6H** (or **KEPT ∞**) while Keep warm holds it, with the time left in that window.
 - **COLD** with how long you have been away and what the next message costs to re-write the cache.
+- **NEW** in a chat that has not sent its first message yet, and **SUMMARY** right after Claude Code compacts a long chat into a summary: the next turn writes a fresh, small cache, so neither counts as going cold.
 
 Click the tag to open **Keep warm**: 1H, 2H, 3H, 6H, Always, and Stop. One click starts it; there is nothing to type.
 
@@ -141,7 +142,7 @@ claude-code-ember/
 │   ├── register.ts         the band, cache tracking, Keep warm, the held send, commands
 │   ├── outfit-metrics.ts   Outfit's glyph widths, so drawn text fits exactly
 │   └── font.ts             Outfit, embedded so the drawings render anywhere
-├── tests/register.test.ts  180 tests
+├── tests/register.test.ts  181 tests
 └── assets/                 banner and illustrations
 ```
 

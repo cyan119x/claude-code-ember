@@ -717,9 +717,13 @@ export function tagOf(s: State, now: number): Tag {
   // The window as it was chosen; after a restart only the time left is known, rounded up to the hour.
   const kept = s.always ? 'KEPT ∞' : `KEPT ${windowLabel(s.keepWindow > 0 ? s.keepWindow : Math.ceil((s.deadline - now) / TTL_1H) * TTL_1H)}`
   if (mode === 'STOPPED') return { word: isCold(s, now) ? 'COLD' : 'WARM', hue: 'muted', time: 'keepwarm stopped' }
+  // No request to time the cache from: a chat not sent yet, or one a compaction just summed up, whose small summary
+  // the next turn writes fresh. Neither is a cold write, so the tag stays muted.
   if (mode === 'WAITING') return s.deadline
     ? { word: kept, hue: 'muted', time: 'from your next turn' }
-    : { word: 'CACHE', hue: 'muted', time: 'rebuilt next turn' }
+    : s.compacted
+      ? { word: 'SUMMARY', hue: 'muted', time: 'cache rebuilt next turn · small write' }
+      : { word: 'NEW', hue: 'muted', time: 'cache starts with your first message' }
   if (mode === 'COLD') {
     const usd = coldUsd(s)
     // A window opened while cold starts with the next send; the time says so, or the choice would seem to do nothing.
